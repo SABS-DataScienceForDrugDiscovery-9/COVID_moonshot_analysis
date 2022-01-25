@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from pprint import pprint
 
-all_data_file = Path('/home/dtc-user/Documents/COVID_moonshot_analysis/COVID_moonshot_submissions/covid_submissions_all_info.csv')
+all_data_file = Path('COVID_moonshot_submissions/covid_submissions_all_info.csv')
 
 class DatabaseFactory():
     def __init__(self, database_path: str):
