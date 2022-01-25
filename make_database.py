@@ -68,6 +68,8 @@ class DatabaseFactory():
             ''')
 
         # Create a table to store all COVID Moonshot compound submissions
+        # r =rapid
+        #f=fluoresence
         conn.execute('''
             CREATE TABLE assays
             (
