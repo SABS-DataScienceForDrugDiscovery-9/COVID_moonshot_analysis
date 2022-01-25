@@ -60,9 +60,10 @@ class DatabaseFactory():
             CREATE TABLE compounds
             (
                 id VARCHAR(20) PRIMARY KEY,
-                smiles VARCHAR(2000) not null,
+                smiles VARCHAR(2000) not null UNIQUE,
                 MW DECIMAL not null,
-                NMR_std_ratio DECIMAL
+                NMR_std_ratio DECIMAL,
+                assayed BOOLEAN
             )
             ''')
 
@@ -159,31 +160,33 @@ class DatabaseFactory():
             rdkit_descriptors = []
             assay_data = []
             for row in reader:
-                compound_data.append((row["CID"], row["SMILES"], row["MW"], row["NMR_std_ratio"]))
+                compound_data.append((
+                    row["CID"], row["SMILES"], row["MW"], row["NMR_std_ratio"], row["ASSAYED"]=="TRUE"))
                 rdkit_descriptors.append((
-                    row["CID"], row["CID"], row["cLogP"], row["HBD"], row["HBA"], row["TPSA"]))
-                assay_data.append((
-                    row["CID"], row["CID"], row["r_inhibition_at_20_uM"], row["r_inhibition_at_50_uM"],
-                    row["r_avg_IC50"], row["r_max_inhibition_reading"], row["r_min_inhibition_reading"],
-                    row["r_hill_slope"], row["r_R2"], row["f_inhibition_at_20_uM"],
-                    row["f_inhibition_at_50_uM"], row["f_avg_IC50"], row["f_avg_pIC50"],
-                    row["f_curve_IC50"], row["f_max_inhibition_reading"],
-                    row["f_min_inhibition_reading"], row["f_hill_slope"], row["f_R2"],
-                    row["relative_solubility_at_20_uM"], row["relative_solubility_at_100_uM"],
-                    row["trypsin_IC50"]))
+                    row["CID"], row["SMILES"], row["cLogP"], row["HBD"], row["HBA"], row["TPSA"]))
+                if (row["ASSAYED"] == "TRUE"):
+                    assay_data.append((
+                        row["CID"], row["SMILES"], row["r_inhibition_at_20_uM"], row["r_inhibition_at_50_uM"],
+                        row["r_avg_IC50"], row["r_max_inhibition_reading"], row["r_min_inhibition_reading"],
+                        row["r_hill_slope"], row["r_R2"], row["f_inhibition_at_20_uM"],
+                        row["f_inhibition_at_50_uM"], row["f_avg_IC50"], row["f_avg_pIC50"],
+                        row["f_curve_IC50"], row["f_max_inhibition_reading"],
+                        row["f_min_inhibition_reading"], row["f_hill_slope"], row["f_R2"],
+                        row["relative_solubility_at_20_uM"], row["relative_solubility_at_100_uM"],
+                        row["trypsin_IC50"]))
 
         conn = self.get_conn()
         conn.executemany("""
         INSERT INTO compounds
-            (id, smiles, MW, NMR_std_ratio)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT (id) DO NOTHING;
+            (id, smiles, MW, NMR_std_ratio, assayed)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (smiles) DO NOTHING;
         """, compound_data)
 
         conn.executemany("""
         INSERT INTO rdkit_descriptors
             (id, compound_id, cLogP, HBD, HBA, TPSA)
-        VALUES (?,?,?,?,?,?)
+        VALUES (?,(SELECT compounds.id FROM compounds where compounds.smiles = ?),?,?,?,?)
         ON CONFlICT (id) DO NOTHING;
         """, rdkit_descriptors)
 
@@ -197,7 +200,7 @@ class DatabaseFactory():
             f_min_inhibition_reading, f_hill_slope, f_R2,
             relative_solubility_at_20_uM, relative_solubility_at_100_uM,
             trypsin_IC50)
-        VALUES (?, ?, ?, ?,
+        VALUES (?, (SELECT compounds.id FROM compounds where compounds.smiles = ?), ?, ?,
             ?, ?, ?,
             ?, ?, ?,
             ?, ?, ?,
