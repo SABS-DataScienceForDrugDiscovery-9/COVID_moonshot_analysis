@@ -63,7 +63,8 @@ class DatabaseFactory():
                 smiles VARCHAR(2000) not null UNIQUE,
                 MW DECIMAL not null,
                 NMR_std_ratio DECIMAL,
-                assayed BOOLEAN
+                assayed BOOLEAN,
+                fingerprint VARCHAR(2048)
             )
             ''')
 
